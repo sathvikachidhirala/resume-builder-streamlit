@@ -1,10 +1,11 @@
 # ai_resume_builder.py
 
 import streamlit as st
-from datetime import datetime
 from fpdf import FPDF
 import random
 import time  # For simulating API delay
+def clean(text):
+    return text.encode("latin-1", "replace").decode("latin-1")
 
 # ----------- AI-enhanced sentence expansion -----------
 def improve_point(point):
@@ -68,6 +69,9 @@ achievements = st.text_area("Mention any key achievements or projects")
 
 # ----------- Resume Generation Button -----------
 if st.button("Generate Resume"):
+    if not name.strip():
+        st.error("Please enter your name.")
+        st.stop()
     # Combine all inputs into one text block
     resume_text = f"""
     Name: {name}
@@ -101,31 +105,36 @@ if st.button("Generate Resume"):
     pdf.add_page()
 
     pdf.chapter_title("Name")
-    pdf.chapter_body(name)
+    pdf.chapter_body(clean(name))
 
     pdf.chapter_title("Contact")
-    pdf.chapter_body(f"Email: {email}\nPhone: {phone}")
+    pdf.chapter_body(clean(f"Email: {email}\nPhone: {phone}"))
 
     pdf.chapter_title("Education")
-    pdf.chapter_body(edu)
+    pdf.chapter_body(clean(edu))
 
     pdf.chapter_title("Experience")
-    expanded_exp = improve_point(exp_points)
-    pdf.chapter_body(expanded_exp)
-
+    pdf.chapter_body(clean(exp_points))
+    
     pdf.chapter_title("Skills")
-    pdf.chapter_body(skills.replace(',', ', '))
+    pdf.chapter_body(clean(", ".join(
+        skill.strip() for skill in skills.split(",") if skill.strip()
+    )))
 
     pdf.chapter_title("Achievements/Projects")
-    pdf.chapter_body(achievements)
+    pdf.chapter_body(clean(achievements))
 
-    # Include mock AI feedback in PDF
-    if entelligence_feedback:
-        pdf.chapter_title("AI Suggestions from Entelligence")
-        pdf.chapter_body(entelligence_feedback.get("suggestions", "No suggestions provided."))
+
 
     # Save PDF
-    file_name = f"Resume_{name.replace(' ', '_')}.pdf"
+    safe_name = "".join(
+        c for c in name if c.isalnum() or c == " "
+    ).strip().replace(" ", "_")
+
+    if not safe_name:
+        safe_name = "User"
+
+    file_name = f"Resume_{safe_name}.pdf"
     pdf.output(file_name)
 
     with open(file_name, "rb") as f:
